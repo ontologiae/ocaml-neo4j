@@ -7,13 +7,16 @@ open Printf
 (*
 let () = Http_client.Convenience.http_verbose ~verbose_status:true ()
  *)
-type 'a event = { event_desc: 'a; when_: Calendar.t }
+type 'a event = { event_desc: 'a; when_: Calendar.t };;
 
-module API = Neorest.Make(struct let server="localhost" let port=7474 end)
+let _ = print_endline "Création transaction";;
+
+let neo = new neo4jConnector "127.0.0.1" 7474 "neo4j" "123";;
+
 
 let next_year : int -> (int option,_) Result.t = fun cur ->
   let next_cmd = "MATCH (years:YEAR) WHERE years.year > {y} RETURN min(years.year)" in
-  let (ans: string) = API.post_cypher ~params:["y", `Int cur] next_cmd in
+  let (ans: string) = neo#cypher next_cmd ["y", `Int cur] in
   match to_json ans |> YoUtil.drop_assoc |> List.assoc "data" with
   | `List[`List[`Null]] -> OK None
   | `List[`List[`Int x]]->
@@ -23,7 +26,7 @@ let next_year : int -> (int option,_) Result.t = fun cur ->
 
 let prev_year : int -> (int option,_) Result.t = fun cur ->
   let next_cmd = "MATCH (years:YEAR) WHERE years.year < {y} RETURN max(years.year)" in
-  let (ans: string) = API.post_cypher ~params:["y", `Int cur] next_cmd in
+  let (ans: string) = neo#cypher next_cmd ["y", `Int cur] in
   match to_json ans |> YoUtil.drop_assoc |> List.assoc "data" with
   | `List[`List[`Null]] -> OK None
   | `List[`List[`Int x]]->
@@ -34,10 +37,10 @@ let prev_year : int -> (int option,_) Result.t = fun cur ->
 let connect_years from dest =
   let cmd = "MATCH (l:YEAR{year: {ll} }), (r:YEAR{year: {rr} })
              WITH l as l, r as r
-             CREATE l-[edge:NEXT_YEAR]->r
+             CREATE (l)-[edge:NEXT_YEAR]->(r)
              RETURN edge
              " in
-  let (ans: string) = API.post_cypher ~params:[ ("ll", `Int from); ("rr",`Int dest) ] cmd in
+  let (ans: string) = neo#cypher cmd [ ("ll", `Int from); ("rr",`Int dest) ] in
   print_endline ans;
   match to_json ans |> YoUtil.drop_assoc |> List.assoc "data" with
   | `List[`List[_]] -> OK ()
@@ -45,16 +48,11 @@ let connect_years from dest =
 
 
 let make_nodes events =
-  let () = match API.remove_all () with
+ (*       let () = match neo#cypher "match (n) detach delete n;" with
     | OK () -> ()
     | Error () -> fprintf stderr "Can't connect to database"; exit 1
-  in
+  in*)
   let f = fun {event_desc; when_} ->
-
-
-
-
-
     (* Add year *)
     let y = Calendar.year when_ in
     let m = Calendar.month when_ |> Date.int_of_month in
@@ -65,13 +63,13 @@ let make_nodes events =
     let p3 = ("d",`Int d) :: p2 in
     let p4 = ("desc",`String (sprintf "%s\\n%s" event_desc (Printer.CalendarPrinter.to_string when_) )) :: p3 in
 
-    let _ = API.post_cypher "MERGE (y:YEAR{year: {y} })
-                             CREATE UNIQUE y-[:HAS_MONTH]->(m:MONTH{month:{m}    })
-                             CREATE UNIQUE m-[:HAS_DAY]->  (d:DAY  {day:  {d}    })
-                             CREATE UNIQUE d-[:HAS_EVENT]->(e:EVENT{desc: {desc} })
+    let _ = neo#cypher "MERGE (y:YEAR{year: {y} })
+                             CREATE (y)-[:HAS_MONTH]->(m:MONTH{month:{m}    })
+                             CREATE (m)-[:HAS_DAY]->  (d:DAY  {day:  {d}    })
+                             CREATE (d)-[:HAS_EVENT]->(e:EVENT{desc: {desc} })
                              WITH y AS y
-                             MATCH n RETURN n
-                             " ~params:p4 in
+                             MATCH (n) RETURN n
+                             " p4 in
     let _ = next_year y
       >>= function
         | Some next -> printf "There is next year %d\n%!" next; connect_years y next
@@ -85,7 +83,9 @@ let make_nodes events =
 
     ()
   in
-  List.iter events ~f
+  List.iter events ~f;;
+
+
 
 let events =
   let open Calendar in

@@ -10,21 +10,24 @@ Library neolib
   BuildTools:   ocamlbuild
   BuildDepends:
     netclient (>= 4.0.0),
-    yojson
+    yojson,
+    batteries,
+    pcre,
+    netstring-pcre
   Path:         src
   Modules:      Neorest,Helpers,Result
 
 Executable demo1
   Path:           tests
   BuildTools:     ocamlbuild
-  BuildDepends:   neolib,calendar
+  BuildDepends:   neolib,calendar,batteries,pcre,netstring-pcre
   CompiledObject: byte
   MainIs:         tree.ml
 
 Executable demo2
   Path:           tests
   BuildTools:     ocamlbuild
-  BuildDepends:   neolib,calendar
+  BuildDepends:   neolib,calendar,batteries,pcre,netstring-pcre
   CompiledObject: byte
   MainIs:         demo2.ml
 

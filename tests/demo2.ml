@@ -14,7 +14,7 @@ open Printf
  *)
 
 type 'a event = { event_desc: 'a; when_: Calendar.t }
-
+(*
 module API = Neorest.Make(struct let server="localhost" let port=7474 end)
 
 let make_nodes events =
@@ -142,7 +142,7 @@ let events =
 let () =
   make_nodes events
 
-
+*)
 
 
 
