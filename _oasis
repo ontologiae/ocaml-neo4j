@@ -15,7 +15,7 @@ Library neolib
     pcre,
     netstring-pcre
   Path:         src
-  Modules:      Neorest,Helpers,Result
+  Modules:      Neorest,Helpers,Neoresult
 
 Executable demo1
   Path:           tests

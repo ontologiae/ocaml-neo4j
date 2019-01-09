@@ -1,5 +1,5 @@
 open Helpers
-open Helpers.Result
+open Helpers.Neoresult
 open Neorest
 open CalendarLib
 open Printf
@@ -14,20 +14,20 @@ let _ = print_endline "Création transaction";;
 let neo = new neo4jConnector "127.0.0.1" 7474 "neo4j" "123";;
 
 
-let next_year : int -> (int option,_) Result.t = fun cur ->
+let next_year : int -> (int option,_) Neoresult.t = fun cur ->
   let next_cmd = "MATCH (years:YEAR) WHERE years.year > {y} RETURN min(years.year)" in
   let (ans: string) = neo#cypher next_cmd ["y", `Int cur] in
-  match to_json ans |> YoUtil.drop_assoc |> List.assoc "data" with
+  match to_json ans |> YU.drop_assoc |> List.assoc "data" with
   | `List[`List[`Null]] -> OK None
   | `List[`List[`Int x]]->
 	Printf.printf "next year %d\n%!" x;
 	OK (Some x)
   | _ -> Error ()
 
-let prev_year : int -> (int option,_) Result.t = fun cur ->
+let prev_year : int -> (int option,_) Neoresult.t = fun cur ->
   let next_cmd = "MATCH (years:YEAR) WHERE years.year < {y} RETURN max(years.year)" in
   let (ans: string) = neo#cypher next_cmd ["y", `Int cur] in
-  match to_json ans |> YoUtil.drop_assoc |> List.assoc "data" with
+  match to_json ans |> YU.drop_assoc |> List.assoc "data" with
   | `List[`List[`Null]] -> OK None
   | `List[`List[`Int x]]->
 	Printf.printf "prev year %d\n%!" x;
@@ -42,7 +42,7 @@ let connect_years from dest =
              " in
   let (ans: string) = neo#cypher cmd [ ("ll", `Int from); ("rr",`Int dest) ] in
   print_endline ans;
-  match to_json ans |> YoUtil.drop_assoc |> List.assoc "data" with
+  match to_json ans |> YU.drop_assoc |> List.assoc "data" with
   | `List[`List[_]] -> OK ()
   | _ -> Error ()
 

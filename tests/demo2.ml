@@ -1,5 +1,5 @@
 open Helpers
-open Helpers.Result
+open Helpers.Neoresult
 open Neorest
 open CalendarLib
 open Printf

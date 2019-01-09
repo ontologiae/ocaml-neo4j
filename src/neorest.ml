@@ -2,24 +2,25 @@ open Printf
 open Helpers
 module Http_client = Nethttp_client
 open Http_client.Convenience
-open Result
-module YojsonBasic = Yojson.Basic
-module Yojson = Yojson.Safe
+open Neoresult
 
 let http_get  = Http_client.Convenience.http_get
 let http_post = Http_client.Convenience.http_post
-let to_json = Yojson.from_string
-let print_json = Yojson.pretty_to_channel stdout
+let to_json = Yojson.Safe.from_string
+let print_json = Yojson.Safe.pretty_to_channel stdout
 
-module YoUtil = struct
+module H = BatHashtbl 
+module L = BatList
+module A = BatArray
+module Y = Yojson
+module YB = Yojson.Basic
+module YU =  struct
   let drop_assoc = function `Assoc xs -> xs | _ -> failwith "Bad argument"
   let drop_string = function `String s -> s | _ -> failwith "Bad argument"
   let drop_int = function `Int n -> n | _ -> failwith "Bad argument"
   let drop_list = function `List xs -> xs | _ -> failwith "Bad argument"
   let unwrap_res x = x |> drop_assoc |> List.assoc "data"
 end
-
-module L = BatList
 
 
 
@@ -51,8 +52,8 @@ let talkToNeo ?(verbose=false) server port login passwd postData = (*On créé u
                 | `Bad_request -> 
                                 print_endline call#response_body#value;
                     let j = to_json call#response_body#value in
-                    j |> YoUtil.drop_assoc |> List.assoc "message"
-                      |> YoUtil.drop_string |> print_endline;
+                    j |> YU.drop_assoc |> List.assoc "message"
+                      |> YU.drop_string |> print_endline;
                  | _ -> 
                                  print_endline call#response_status_text;
                                  print_endline call#response_body#value;
@@ -68,6 +69,31 @@ let talkToNeo ?(verbose=false) server port login passwd postData = (*On créé u
 
 
 
+class neoResult = object(self)
+        val mutable columnList = []
+        val mutable hColumns   = H.create 345
+        val mutable linesMeta  = [||]
+        val mutable lines      = [||]
+
+        method parseResult res = let json  = res |> YB.from_string in
+                              let start = L.at (json |> YU.drop_assoc) 1 |> snd |> YU.drop_list |> L.hd |> YU.drop_assoc in
+                              let cols, mylines = L.hd start, L.at start 1 in
+                              columnList <- L.map (fun n ->  YU.drop_string n) (snd cols |> YU.drop_list);
+                              linesMeta <- snd mylines |> YU.drop_list |> L.map (fun el -> L.at (YU.drop_assoc el) 1 |> snd ) |> A.of_list;
+                              lines     <- snd mylines |> YU.drop_list |> L.map (fun el -> YU.drop_assoc el |> L.hd  |> snd ) |> A.of_list;
+                              L.iteri (fun idx -> fun col -> A.iter (fun ligne -> H.add hColumns col (L.at (ligne|> YU.drop_list) idx)) lines )
+                              columnList;
+                              ()
+
+        method getAll = columnList, hColumns, linesMeta, lines
+
+        method getColumn col = H.find_all hColumns col
+        method getLine   n   = lines.(n)
+        method getLineMeta n = linesMeta.(n)
+        method getColumnForLine col n = let l = H.find_all hColumns col in L.at l n
+end
+
+
 class neo4jConnector server port login passwd  = object(self)
         val mutable idTransaction = 0
         method initTransaction  = let result = talkToNeo ~verbose:true server port login passwd "" in
@@ -79,7 +105,7 @@ class neo4jConnector server port login passwd  = object(self)
         method endTransaction = true
         method cypher req params = (*let buildParams params : (string * YojsonBasic.json) = "parameters",  `Assoc (L.map (fun (a,b) -> (a,`String b)) params) in*)
                                    let args = `Assoc [("statements", `List [`Assoc [("statement", `String req); ("parameters", `Assoc params) ]])] in
-                                   let req  = YojsonBasic.to_string args in
+                                   let req  = YB.to_string args in
                                    let result = talkToNeo ~verbose:true server port login passwd req in
                                    print_endline result;
                                    result;
