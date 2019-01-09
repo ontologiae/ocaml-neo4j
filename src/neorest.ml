@@ -2,7 +2,7 @@ open Printf
 open Helpers
 module Http_client = Nethttp_client
 open Http_client.Convenience
-open Neoresult
+
 
 let http_get  = Http_client.Convenience.http_get
 let http_post = Http_client.Convenience.http_post

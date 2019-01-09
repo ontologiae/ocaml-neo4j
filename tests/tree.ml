@@ -1,5 +1,4 @@
 open Helpers
-open Helpers.Neoresult
 open Neorest
 open CalendarLib
 open Printf
@@ -13,7 +12,7 @@ let _ = print_endline "Création transaction";;
 
 let neo = new neo4jConnector "127.0.0.1" 7474 "neo4j" "123";;
 
-
+(*
 let next_year : int -> (int option,_) Neoresult.t = fun cur ->
   let next_cmd = "MATCH (years:YEAR) WHERE years.year > {y} RETURN min(years.year)" in
   let (ans: string) = neo#cypher next_cmd ["y", `Int cur] in
@@ -99,7 +98,7 @@ let events =
 
 let () =
   make_nodes events
-
+*)
 
 
 
