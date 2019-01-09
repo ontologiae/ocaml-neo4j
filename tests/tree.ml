@@ -12,6 +12,12 @@ let _ = print_endline "Création transaction";;
 
 let neo = new neo4jConnector "127.0.0.1" 7474 "neo4j" "123";;
 
+
+let rn = neo#cypher "match (n) return n limit 10;" [];;
+let nr = new neoResult;;
+nr#parseResult rn;;
+nr#getColumn "n" |> List.length |> Printf.printf " %d Noeuds";;
+
 (*
 let next_year : int -> (int option,_) Neoresult.t = fun cur ->
   let next_cmd = "MATCH (years:YEAR) WHERE years.year > {y} RETURN min(years.year)" in

@@ -43,21 +43,21 @@ let talkToNeo ?(verbose=false) server port login passwd postData = (*On créé u
                 if verbose then print_endline "connexion ok...";
                 let pipeline = new Http_client.pipeline in
                 if verbose then print_endline "pipe...";
-                if verbose then req#set_req_header "Authorization" passneo;
-                if verbose then req#set_req_header "Content-type" "application/json";
+                req#set_req_header "Authorization" passneo;
+                req#set_req_header "Content-type" "application/json";
                 if verbose then print_endline "headers..";
                 pipeline#add_with_callback req @@
                 (fun call -> match call#response_status with
                 | `Ok -> ()
                 | `Bad_request -> 
-                                print_endline call#response_body#value;
+                                if verbose then print_endline call#response_body#value;
                     let j = to_json call#response_body#value in
-                    j |> YU.drop_assoc |> List.assoc "message"
+                    if verbose then j |> YU.drop_assoc |> List.assoc "message"
                       |> YU.drop_string |> print_endline;
                  | _ -> 
-                                 print_endline call#response_status_text;
+                                (* print_endline call#response_status_text;
                                  print_endline call#response_body#value;
-                                 (*print_endline "callback";*)
+                                 print_endline "callback";*)
                                  ()
                  );
                  pipeline#run ();
@@ -96,7 +96,7 @@ end
 
 class neo4jConnector server port login passwd  = object(self)
         val mutable idTransaction = 0
-        method initTransaction  = let result = talkToNeo ~verbose:true server port login passwd "" in
+        method initTransaction  = let result = talkToNeo ~verbose:false server port login passwd "" in
                                   let urls = match_regexp ".+?commit\":\"http:.+?db.data.transaction.(\\d+)\\/commit\".*" result in
                                   let res = if BatList.length urls > 0 then BatList.hd urls else "" in
                                   idTransaction <- (int_of_string res);
@@ -106,8 +106,8 @@ class neo4jConnector server port login passwd  = object(self)
         method cypher req params = (*let buildParams params : (string * YojsonBasic.json) = "parameters",  `Assoc (L.map (fun (a,b) -> (a,`String b)) params) in*)
                                    let args = `Assoc [("statements", `List [`Assoc [("statement", `String req); ("parameters", `Assoc params) ]])] in
                                    let req  = YB.to_string args in
-                                   let result = talkToNeo ~verbose:true server port login passwd req in
-                                   print_endline result;
+                                   let result = talkToNeo ~verbose:false server port login passwd req in
+                                   (*if verbose then print_endline result;*)
                                    result;
 
 end
