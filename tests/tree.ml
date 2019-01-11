@@ -12,9 +12,7 @@ let _ = print_endline "Création transaction";;
 let neo = new neo4jConnector "127.0.0.1" 7474 "neo4j" "123";;
 
 
-let rn = neo#cypher "match (n) return n limit 10;" [];;
-let nr = new neoResult;;
-nr#parseResult rn;;
+let nr = neo#cypher "match (n) return n limit 10;" [];;
 nr#getColumn "n" |> List.length |> Printf.printf " %d Noeuds";;
 
 (*

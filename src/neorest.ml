@@ -107,7 +107,9 @@ class neo4jConnector server port login passwd  = object(self)
                                    let req  = YB.to_string args in
                                    let result = talkToNeo ~verbose:false server port login passwd req in
                                    (*if verbose then print_endline result;*)
-                                   result;
+                                   let neoparser = new neoResult in
+                                   neoparser#parseResult result;
+                                   neoparser
 
 end
 
